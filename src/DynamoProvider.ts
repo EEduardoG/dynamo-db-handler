@@ -1,4 +1,4 @@
-import { BatchWriteItemCommand, DynamoDBClient, PutItemCommand, PutItemCommandInput, PutItemCommandOutput, QueryCommand, QueryCommandInput, ScanCommand, ScanCommandInput, UpdateItemCommand, UpdateItemCommandInput, UpdateItemCommandOutput } from "@aws-sdk/client-dynamodb";
+import { BatchWriteItemCommand, DynamoDBClient, GetItemCommand, GetItemCommandInput, PutItemCommand, PutItemCommandInput, PutItemCommandOutput, QueryCommand, QueryCommandInput, ScanCommand, ScanCommandInput, UpdateItemCommand, UpdateItemCommandInput, UpdateItemCommandOutput } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import * as dotenv from 'dotenv'
 
@@ -132,6 +132,23 @@ export default class DynamoProvider {
             throw { error: err, errorTrace: error }
         }
 
+    }
+
+    async get(getItemCommandInput: GetItemCommandInput): Promise<any> {
+        try {
+            let response: any = await this.setClient().send(new GetItemCommand(getItemCommandInput))
+
+            if (response.Item) {
+                response = unmarshall(response.Item)
+                return response
+            } else {
+                return null
+            }
+        } catch (error) {
+            console.log(error)
+            const err = defaultError
+            throw { error: err, errorTrace: error }
+        }
     }
 
     async findAll(params: ScanCommandInput): Promise<Array<any>> {
