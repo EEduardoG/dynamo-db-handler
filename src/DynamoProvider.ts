@@ -185,8 +185,12 @@ export default class DynamoProvider {
                 let resp = await find(params, pagination)
                 pagination = resp?.pagination ? resp?.pagination : ""
                 condition = resp?.pagination ? true : false
-                //Concat cities array wit new data
-                elements = elements.concat(resp)
+
+                if (resp?.pagination) {
+                    elements = elements.concat(resp.elements);
+                } else {
+                    elements = elements.concat(resp);
+                }
 
             } while (condition);
 
