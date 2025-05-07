@@ -1,7 +1,7 @@
 {
     "name": "dynamo-db-handler",
     "description": "A simple DynamoDB handler for Node.js",
-    "version": "0.0.3",
+    "version": "0.0.6",
     "author": "Erick Garcia",
     "license": "MIT",
     "main": "dist/index.js",

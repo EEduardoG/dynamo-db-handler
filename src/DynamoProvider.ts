@@ -1,4 +1,4 @@
-import { BatchWriteItemCommand, DynamoDBClient, GetItemCommand, GetItemCommandInput, PutItemCommand, PutItemCommandInput, PutItemCommandOutput, QueryCommand, QueryCommandInput, ScanCommand, ScanCommandInput, UpdateItemCommand, UpdateItemCommandInput, UpdateItemCommandOutput } from "@aws-sdk/client-dynamodb";
+import { BatchGetItemCommand, BatchWriteItemCommand, DynamoDBClient, GetItemCommand, GetItemCommandInput, PutItemCommand, PutItemCommandInput, PutItemCommandOutput, QueryCommand, QueryCommandInput, ScanCommand, ScanCommandInput, UpdateItemCommand, UpdateItemCommandInput, UpdateItemCommandOutput } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import * as dotenv from 'dotenv'
 
@@ -41,6 +41,43 @@ export default class DynamoProvider {
                 })
 
         return dynamoClient
+    }
+
+
+    async batchGet(keys: any[], tableName: string): Promise<any[]> {
+        const client = this.setClient();
+        const results: any[] = [];
+
+        const chunkSize = 100; // DynamoDB permite máximo 100 claves por llamada
+        for (let i = 0; i < keys.length; i += chunkSize) {
+            const chunk = keys.slice(i, i + chunkSize);
+
+            const params = {
+                RequestItems: {
+                    [tableName]: {
+                        Keys: chunk.map(key => marshall(key))
+                    }
+                }
+            };
+
+            try {
+                const response = await client.send(new BatchGetItemCommand(params));
+                const rawItems = response.Responses?.[tableName] || [];
+                const unmarshalledItems = rawItems.map(item => unmarshall(item));
+                results.push(...unmarshalledItems);
+
+                // Reintenta si hay UnprocessedKeys
+                if (response.UnprocessedKeys && Object.keys(response.UnprocessedKeys).length > 0) {
+                    console.warn('Warning: Some keys were unprocessed, consider reprocessing:', response.UnprocessedKeys);
+                }
+
+            } catch (error) {
+                console.error("Error in batchGet:", error);
+                throw { error: defaultError, errorTrace: error };
+            }
+        }
+
+        return results;
     }
 
     async save(params: PutItemCommandInput): Promise<PutItemCommandOutput> {
@@ -185,12 +222,7 @@ export default class DynamoProvider {
                 let resp = await find(params, pagination)
                 pagination = resp?.pagination ? resp?.pagination : ""
                 condition = resp?.pagination ? true : false
-
-                if (resp?.pagination) {
-                    elements = elements.concat(resp.elements);
-                } else {
-                    elements = elements.concat(resp);
-                }
+                elements = elements.concat(resp?.elements ?? resp);
 
             } while (condition);
 
